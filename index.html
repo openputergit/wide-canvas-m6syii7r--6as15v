@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oportune Times</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        #drawingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: auto;
+        }
+        .toolbar {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .tool-button {
+            transition: all 0.3s ease;
+        }
+        .tool-button:hover {
+            background: #e2e8f0;
+        }
+        .tool-button.active {
+            background: #cbd5e1;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <img src="https://firebasestorage.googleapis.com/v0/b/widecanvas-d0dd4.appspot.com/o/logos%2Fopportune_times.jpg?alt=media&token=44856035-1278-4d94-83ec-499617265d9a" 
+                 alt="Oportune Times Logo" 
+                 class="h-12 md:h-16">
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-3xl font-bold mb-6 text-gray-800">Welcome to Oportune Times</h1>
+            <p class="text-gray-600 mb-6">
+                Your comprehensive platform for the latest internships, workshops, seminars, and courses from top colleges. 
+                We provide real-time updates to help students discover career-enhancing opportunities, build professional portfolios, 
+                expand professional networks, and stay informed about cutting-edge educational events.
+            </p>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar fixed bottom-4 left-1/2 transform -translate-x-1/2 p-2 flex gap-2 flex-wrap justify-center">
+            <button class="tool-button p-2 rounded" data-tool="pen" title="Pen">
+                <i class="bi bi-pen"></i>
+            </button>
+            <button class="tool-button p-2 rounded" data-tool="pencil" title="Pencil">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button class="tool-button p-2 rounded" data-tool="highlighter" title="Highlighter">
+                <i class="bi bi-highlighter"></i>
+            </button>
+            <button class="tool-button p-2 rounded" data-tool="circle" title="Circle">
+                <i class="bi bi-circle"></i>
+            </button>
+            <button class="tool-button p-2 rounded" data-tool="rectangle" title="Rectangle">
+                <i class="bi bi-square"></i>
+            </button>
+            <button class="tool-button p-2 rounded" data-tool="undo" title="Undo">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button class="tool-button p-2 rounded" data-tool="redo" title="Redo">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button class="tool-button p-2 rounded" data-tool="fullscreen" title="Full Screenshot">
+                <i class="bi bi-fullscreen"></i>
+            </button>
+            <button class="tool-button p-2 rounded" data-tool="crop" title="Selected Area Screenshot">
+                <i class="bi bi-crop"></i>
+            </button>
+            <input type="color" id="colorPicker" class="w-8 h-8 rounded cursor-pointer">
+            <input type="range" id="sizeSlider" min="1" max="20" value="5" class="w-24">
+        </div>
+    </main>
+
+    <!-- Canvas Container -->
+    <div class="canvas-container">
+        <canvas id="drawingCanvas"></canvas>
+    </div>
+
+    <script>
+        let canvas = document.getElementById('drawingCanvas');
+        let ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let currentTool = 'pen';
+        let drawingHistory = [];
+        let historyIndex = -1;
+        let startX, startY;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Tool selection
+        document.querySelectorAll('.tool-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                currentTool = button.dataset.tool;
+            });
+        });
+
+        // Drawing functionality
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            [startX, startY] = [e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop];
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.strokeStyle = document.getElementById('colorPicker').value;
+            ctx.lineWidth = document.getElementById('sizeSlider').value;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const x = e.clientX - canvas.offsetLeft;
+            const y = e.clientY - canvas.offsetTop;
+
+            switch(currentTool) {
+                case 'pen':
+                case 'pencil':
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                    break;
+                case 'highlighter':
+                    ctx.globalAlpha = 0.3;
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                    ctx.globalAlpha = 1.0;
+                    break;
+                case 'circle':
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (historyIndex >= 0) ctx.putImageData(drawingHistory[historyIndex], 0, 0);
+                    ctx.beginPath();
+                    const radius = Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2));
+                    ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    break;
+                case 'rectangle':
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if (historyIndex >= 0) ctx.putImageData(drawingHistory[historyIndex], 0, 0);
+                    ctx.strokeRect(startX, startY, x - startX, y - startY);
+                    break;
+            }
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                saveState();
+            }
+        }
+
+        function saveState() {
+            historyIndex++;
+            if (historyIndex < drawingHistory.length) {
+                drawingHistory.length = historyIndex;
+            }
+            drawingHistory.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        }
+
+        document.querySelector('[data-tool="undo"]').addEventListener('click', () => {
+            if (historyIndex > 0) {
+                historyIndex--;
+                ctx.putImageData(drawingHistory[historyIndex], 0, 0);
+            }
+        });
+
+        document.querySelector('[data-tool="redo"]').addEventListener('click', () => {
+            if (historyIndex < drawingHistory.length - 1) {
+                historyIndex++;
+                ctx.putImageData(drawingHistory[historyIndex], 0, 0);
+            }
+        });
+
+        // Screenshot functionality
+        document.querySelector('[data-tool="fullscreen"]').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'screenshot.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+
+        let isSelecting = false;
+        let selectionRect = { x: 0, y: 0, width: 0, height: 0 };
+
+        document.querySelector('[data-tool="crop"]').addEventListener('click', () => {
+            currentTool = 'crop';
+            isSelecting = true;
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
